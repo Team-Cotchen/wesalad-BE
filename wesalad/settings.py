@@ -1,5 +1,5 @@
 from pathlib import Path
-from my_settings import DATABASES, SECRET_KEY
+from my_settings import DATABASES, SECRET_KEY, ALGORITHM, GOOGLE_OAUTH2_CLIENT_ID, GOOGLE_OAUTH2_CLIENT_SECRET, GOOGLE_OAUTH2_REDIRECT_URI
 
 import pymysql
 
@@ -25,7 +25,7 @@ ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     # 'django.contrib.admin',
-    # 'django.contrib.auth',
+    'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
@@ -34,6 +34,12 @@ INSTALLED_APPS = [
     'users',
     'posts',
     'characteristics',
+    
+    # auth
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google'
 ]
 
 MIDDLEWARE = [
@@ -41,7 +47,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     # 'django.middleware.csrf.CsrfViewMiddleware',
-    # 'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -141,3 +147,15 @@ CORS_ALLOW_HEADERS = (
 )
 
 APPEND_SLASH = False
+
+AUTHENTICATION_BACKENDS = (
+    #Needed to login by username in Django admin, regardless of 'allauth'
+    'django.contrib.auth.backends.ModelBackend',
+    
+    # 'allauth' specific authentication methods, such as login by e-mail
+    'allauth.account.auth_backends.AuthenticationBackend',
+)
+
+
+
+
