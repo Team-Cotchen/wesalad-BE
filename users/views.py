@@ -1,3 +1,4 @@
+from os import stat
 import jwt, datetime, json
 
 from django.shortcuts import redirect
@@ -7,6 +8,7 @@ from django.http      import HttpResponse, JsonResponse
 from django.db        import IntegrityError
 
 from users.models import User, GoogleSocialAccount
+from characteristics.models import Question, Answer, Stack
 from .services    import google_get_access_token, google_get_user_info
 
 class GoogleLoginAPI(View):
@@ -61,10 +63,24 @@ class GoogleSignInView(View):
             'exp': datetime.datetime.now() + datetime.timedelta(days=1)}, settings.SECRET_KEY, settings.ALGORITHM)
 
 class SignUpView(View):
-    def post(self, request, google_account_id):
+    def get(self, request):
+        questions = Question.objects.prefetch_related('answers').all()
+        result = {
+            'characteristics' : [{
+                f'question_{question.id}': question.content,
+                'answers' : [answer.content for answer in Answer.objects.filter(question=question)]
+                } for question in questions],
+            
+                'stacks' : [{'title' : stack.title, 'image' : stack.image_url} for stack in Stack.objects.all()]
+            }
+        
+        return JsonResponse({'result': result}, status=200)
+    
+    def post(self, request):
         try: 
-            body_data      = json.loads(request.body)
-            google_account = GoogleSocialAccount.objects.get(id=google_account_id)
+            body_data         = json.loads(request.body)
+            google_account_id = request.GET.get('google_account_id')
+            google_account    = GoogleSocialAccount.objects.get(id=google_account_id)
             
             User.objects.create(
                 name           = body_data['name'],
