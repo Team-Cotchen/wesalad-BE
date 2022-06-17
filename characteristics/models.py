@@ -9,6 +9,7 @@ class Question(models.Model):
 class Answer(models.Model):
     content     = models.CharField(max_length=300)
     description = models.CharField(max_length=200)
+    image_url   = models.CharField(max_length=500)
     question    = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='answers')
     
     class Meta:

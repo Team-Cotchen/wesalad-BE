@@ -28,7 +28,13 @@ class ApplyWay(models.Model):
     title = models.CharField(max_length=200)
     
     class Meta:
-        db_table = 'applyways' 
+        db_table = 'applyways'
+
+class Place(models.Model):
+    title = models.CharField(max_length=200)
+    
+    class Meta:
+        db_table = 'places'
 
 class PostAnswer(TimestampZone): 
     post       = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='postanswers')
@@ -51,3 +57,10 @@ class PostApplyWay(models.Model):
     
     class Meta:
         db_table = 'postapplyways'
+
+class PostPlace(models.Model): 
+    post  = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='postplaces')
+    place = models.ForeignKey(Place, on_delete=models.CASCADE, related_name='postplaces')
+    
+    class Meta:
+        db_table = 'postplaces'
