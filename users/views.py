@@ -1,15 +1,15 @@
-from os import stat
 import jwt, datetime, json
 
 from django.shortcuts import redirect
 from django.conf      import settings
 from django.views     import View
 from django.http      import HttpResponse, JsonResponse
-from django.db        import IntegrityError
+from django.db        import IntegrityError, transaction
 
-from users.models import User, GoogleSocialAccount
+
+from users.models           import User, GoogleSocialAccount, UserAnswer, UserStack
 from characteristics.models import Question, Answer, Stack
-from .services    import google_get_access_token, google_get_user_info
+from .services              import google_get_access_token, google_get_user_info
 
 class GoogleLoginAPI(View):
     def get(self, request):
@@ -60,7 +60,7 @@ class GoogleSignInView(View):
     def generate_jwt(self, user_id):
         return jwt.encode({
             'sub': user_id,
-            'exp': datetime.datetime.now() + datetime.timedelta(days=1)}, settings.SECRET_KEY, settings.ALGORITHM)
+            'exp': datetime.datetime.now() + datetime.timedelta(days=30)}, settings.SECRET_KEY, settings.ALGORITHM)
 
 class SignUpView(View):
     def get(self, request):
@@ -78,16 +78,34 @@ class SignUpView(View):
     
     def post(self, request):
         try: 
-            body_data         = json.loads(request.body)
+            data         = request.POST
             google_account_id = request.GET.get('google_account_id')
             google_account    = GoogleSocialAccount.objects.get(id=google_account_id)
             
-            User.objects.create(
-                name           = body_data['name'],
-                ordinal_number = body_data['ordinal_number'],
-                google_account = google_account
-            )
-        
+            answers = data['answers'].split(',')
+            stacks  = data['stacks'].split(',')
+            
+            with transaction.atomic():
+                user = User.objects.create(
+                    name           = data['name'],
+                    ordinal_number = data['ordinal_number'],
+                    google_account = google_account
+                )
+                
+                for answer_id in answers:
+                    UserAnswer.objects.create(
+                        user = user,
+                        answer = Answer.objects.get(id=answer_id)
+                    )
+                
+                for stack_id in stacks:
+                    UserStack.objects.create(
+                        user = user,
+                        stack = Stack.objects.get(id=stack_id)
+                    )
+
             return HttpResponse(status = 201)
         except IntegrityError:
             return JsonResponse({'message' : 'THIS_ACCOUNT_ALREADY_EXIST'}, status=400)
+        except ValueError:
+            return JsonResponse({'message' : 'VALUE_ERROR'}, status=400)
