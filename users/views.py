@@ -1,5 +1,7 @@
 import jwt, datetime, json
-
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.views import APIView
 from django.shortcuts import redirect
 from django.conf      import settings
 from django.views     import View
@@ -23,7 +25,7 @@ class GoogleLoginAPI(View):
         response = redirect(f'{google_auth_api}?client_id={app_key}&response_type=code&redirect_uri={redirect_uri}&scope={scope}')
         return response
 
-class GoogleSignInView(View):
+class GoogleSignInView(APIView):
     def get(self, request):
         auth_code        = request.GET.get('code')
         google_token_api = "https://oauth2.googleapis.com/token"
@@ -41,9 +43,11 @@ class GoogleSignInView(View):
             return JsonResponse({'google_account_id' : google_account.id})
         
         user  = User.objects.get(google_account=google_account)
+        print(user.id)
         token = self.generate_jwt(user.id)
-        
-        return JsonResponse({'token' : token}, status=200)
+        print(token)
+                
+        return Response({'token' : token}, status=status.HTTP_200_OK)
 
     def get_or_create(self, sub, google_profile_picture, google_email):
         if not GoogleSocialAccount.objects.filter(sub=sub).exists():
