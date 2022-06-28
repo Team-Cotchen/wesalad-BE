@@ -20,12 +20,14 @@ class Post(TimestampZone):
     period          = models.CharField(max_length=50)
     description     = models.TextField(blank=True, null=True)
     start_date      = models.DateTimeField()
+    status          = models.CharField(max_length=50, default='active')
     
     class Meta:
         db_table = 'posts'
         
 class ApplyWay(models.Model):
-    title = models.CharField(max_length=200)
+    title       = models.CharField(max_length=200)
+    description = models.CharField(max_length=200)
     
     class Meta:
         db_table = 'applyways'
