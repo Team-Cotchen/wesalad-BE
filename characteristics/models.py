@@ -16,8 +16,9 @@ class Answer(models.Model):
         db_table = 'answers'
 
 class Stack(models.Model):
-    title     = models.CharField(max_length=100)
-    image_url = models.CharField(max_length=500)
+    title       = models.CharField(max_length=100)
+    image_url   = models.CharField(max_length=500)
+    description = models.CharField(max_length=200)
     
     class Meta:
         db_table = 'stacks'

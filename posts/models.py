@@ -27,7 +27,6 @@ class Post(TimestampZone):
         
 class ApplyWay(models.Model):
     title       = models.CharField(max_length=200)
-    description = models.CharField(max_length=200)
     
     class Meta:
         db_table = 'applyways'
@@ -54,8 +53,9 @@ class PostStack(models.Model):
         db_table = 'poststacks'
         
 class PostApplyWay(models.Model): 
-    post     = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='postapplyways')
-    applyway = models.ForeignKey(ApplyWay, on_delete=models.CASCADE, related_name='postapplyways')
+    post        = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='postapplyways')
+    applyway    = models.ForeignKey(ApplyWay, on_delete=models.CASCADE, related_name='postapplyways')
+    description = models.CharField(max_length=200, blank=True, null=True)
     
     class Meta:
         db_table = 'postapplyways'
