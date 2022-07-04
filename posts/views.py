@@ -3,7 +3,7 @@ from rest_framework.response    import Response
 from rest_framework.permissions import IsAuthenticated
 
 from .models     import Post
-from .serializer import PostCreateSerializer, PostDetailSerializer, PostSimpleSerializer
+from .serializers import PostCreateSerializer, PostDetailSerializer, PostSimpleSerializer
 
 class PostSimpleView(APIView):
     def get(self, request):

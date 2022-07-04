@@ -1,6 +1,6 @@
 # DRF
 from rest_framework.response         import Response
-from rest_framework                  import status, generics
+from rest_framework                  import status
 from rest_framework.views            import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions      import IsAuthenticated
@@ -14,7 +14,7 @@ from django.contrib.auth import get_user_model
 from .models                import GoogleSocialAccount, UserAnswer, UserStack
 from characteristics.models import Question, Answer, Stack
 from .services              import google_get_access_token, google_get_user_info
-from .serializers           import UserCreateSerializer
+from .serializers           import UserCreateSerializer, UserAnswerSerializer
 
 
 User = get_user_model()
@@ -38,7 +38,7 @@ class GoogleSignInAPI(APIView):
         
         access_token = google_get_access_token(google_token_api, auth_code)
         user_data    = google_get_user_info(access_token)
-        
+
         google_account, is_created = GoogleSocialAccount.objects.get_or_create(
             sub       = user_data['sub'],
             email     = user_data['email'],
@@ -55,10 +55,6 @@ class GoogleSignInAPI(APIView):
                 
         return Response(token, status=status.HTTP_200_OK)
 
-    # def generate_jwt(self, user_id):
-    #     return jwt.encode({
-    #         'sub': user_id,
-    #         'exp': datetime.datetime.now() + datetime.timedelta(days=30)}, settings.SECRET_KEY, settings.ALGORITHM)
     def generate_jwt(self, user):
         refresh = RefreshToken.for_user(user)
         
@@ -67,33 +63,48 @@ class GoogleSignInAPI(APIView):
             'access' : str(refresh.access_token),
         }
 
-class SignUpAPI(generics.CreateAPIView):
-        queryset          = User.objects.all()
-        lookup_url_kwargs = 'google_account_id'
-        
-        def create(self, request, *args, **kwargs):
-            try:
-                serializer = UserCreateSerializer(data = request.data)
-                serializer.is_valid(raise_exception=True)
-                token = self.perform_create(serializer)
-                
-                return Response(token, status=status.HTTP_201_CREATED)
-            except ValueError:
-                return Response({'ERROR' : 'THIS_ACCOUNT_ALREADY_EXIST'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        def perform_create(self, serializer):
-            google_account = GoogleSocialAccount.objects.get(id=self.kwargs.get('google_account_id'))
-            
-            if not User.objects.filter(google_account = google_account).exists():
-                serializer.save(google_account = google_account)
-                
-                user  = User.objects.get(google_account=google_account)
-                token = GoogleSignInAPI.generate_jwt(self, user)
-                return token
-            raise ValueError
 
-# class UserCharacteristicAPI(APIView):
-    
+class SignUpAPI(APIView):
+        def post(self, request, google_account_id):
+            
+            serializer = UserCreateSerializer(data=request.data)
+            answers    = request.data.get('answers')
+            stacks     = request.data.get('stacks')
+        
+            if serializer.is_valid():
+                serializer.save(
+                    google_account_id = google_account_id,
+                    answers = answers,
+                    stacks = stacks
+                )
+                
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+# class SignUpAPI(generics.CreateAPIView):
+#         queryset          = User.objects.all()
+#         lookup_url_kwargs = 'google_account_id'
+#         
+#         def create(self, request, *args, **kwargs):
+#             try:
+#                 serializer = UserCreateSerializer(data = request.data)
+#                 serializer.is_valid(raise_exception=True)
+#                 token = self.perform_create(serializer)
+#                 
+#                 return Response(token, status=status.HTTP_201_CREATED)
+#             except ValueError:
+#                 return Response({'ERROR' : 'THIS_ACCOUNT_ALREADY_EXIST'}, status=status.HTTP_400_BAD_REQUEST)
+#         
+#         def perform_create(self, serializer):
+#             google_account = GoogleSocialAccount.objects.get(id=self.kwargs.get('google_account_id'))
+#             
+#             if not User.objects.filter(google_account = google_account).exists():
+#                 serializer.save(google_account = google_account)
+#                 
+#                 user  = User.objects.get(google_account=google_account)
+#                 token = GoogleSignInAPI.generate_jwt(self, user)
+#                 return token
+#             raise ValueError    
 
 # class SignUpAPI(APIView):
 #     def get(self, request):
@@ -108,7 +119,7 @@ class SignUpAPI(generics.CreateAPIView):
 #             }
 #         
 #         return JsonResponse({'result': result}, status=200)
-#     
+    
 #     def post(self, request):
 #         try: 
 #             data              = request.POST
@@ -125,18 +136,18 @@ class SignUpAPI(generics.CreateAPIView):
 #                     google_account = google_account
 #                 )
 #                 
-#                 for answer_id in answers:
-#                     UserAnswer.objects.create(
-#                         user = user,
-#                         answer = Answer.objects.get(id=answer_id)
-#                     )
-#                 
-#                 for stack_id in stacks:
-#                     UserStack.objects.create(
-#                         user = user,
-#                         stack = Stack.objects.get(id=stack_id)
-#                     )
-# 
+                # for answer_id in answers:
+                #     UserAnswer.objects.create(
+                #         user = user,
+                #         answer = Answer.objects.get(id=answer_id)
+                #     )
+                # 
+                # for stack_id in stacks:
+                #     UserStack.objects.create(
+                #         user = user,
+                #         stack = Stack.objects.get(id=stack_id)
+                #     )
+# # 
 #             return HttpResponse(status = 201)
 #         except IntegrityError:
 #             return JsonResponse({'message' : 'THIS_ACCOUNT_ALREADY_EXIST'}, status=400)
