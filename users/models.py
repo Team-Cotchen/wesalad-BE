@@ -1,20 +1,35 @@
 from django.db import models
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 
 from utils.timestamp        import TimestampZone
 from characteristics.models import Stack, Answer
+from .managers              import UserManager
 
 class GoogleSocialAccount(TimestampZone): 
     sub       = models.CharField(max_length=400)
     image_url = models.CharField(max_length=300, null=True, blank=True)
-    email     = models.CharField(max_length=100, unique=True)
+    email     = models.EmailField(max_length=255, unique=True)
 
     class Meta:
         db_table = 'google_social_accounts'
     
-class User(TimestampZone):
-    name           = models.CharField(max_length=50)
+class User(AbstractBaseUser, PermissionsMixin, TimestampZone): 
+    name           = models.CharField(max_length=100)
     ordinal_number = models.IntegerField()
-    google_account = models.ForeignKey(GoogleSocialAccount, on_delete=models.CASCADE, unique=True, related_name='users')
+    password       = None
+    google_account = models.ForeignKey(GoogleSocialAccount, on_delete=models.CASCADE, related_name='users')
+    
+    is_active    = models.BooleanField(default=True) #유저의 삭제보단 이 필드를 활성화
+    is_admin     = models.BooleanField(default=False)
+    is_superuser = None
+    
+    objects = UserManager()
+    
+    USERNAME_FIELD  = 'id'
+    REQUIRED_FIELDS = ['name', 'ordinal_number']
+    
+    def __str__(self):
+        return self.nickname
     
     class Meta:
         db_table = 'users'
