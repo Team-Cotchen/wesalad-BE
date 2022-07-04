@@ -15,8 +15,8 @@ class Post(TimestampZone):
     user            = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
     category        = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='posts')
     title           = models.CharField(max_length=200)
-    number_of_front = models.IntegerField()
-    number_of_back  = models.IntegerField()
+    number_of_front = models.CharField(max_length=50)
+    number_of_back  = models.CharField(max_length=50)
     period          = models.CharField(max_length=50)
     description     = models.TextField(blank=True, null=True)
     start_date      = models.DateTimeField()
@@ -26,7 +26,7 @@ class Post(TimestampZone):
         db_table = 'posts'
         
 class ApplyWay(models.Model):
-    title       = models.CharField(max_length=200)
+    title = models.CharField(max_length=200)
     
     class Meta:
         db_table = 'applyways'
@@ -36,6 +36,15 @@ class Place(models.Model):
     
     class Meta:
         db_table = 'places'
+
+class Flavor(models.Model):
+    title       = models.CharField(max_length=300)
+    description = models.CharField(max_length=200)
+    image_url   = models.CharField(max_length=500)
+    
+    class Meta:
+        db_table = 'flavors'
+        
 
 class PostAnswer(TimestampZone): 
     post       = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='postanswers')
@@ -66,3 +75,10 @@ class PostPlace(models.Model):
     
     class Meta:
         db_table = 'postplaces'
+
+class PostFlavor(TimestampZone): 
+    post       = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='postflavors')
+    flavor     = models.ForeignKey(Flavor, on_delete=models.CASCADE, related_name='postflavors')
+    
+    class Meta:
+        db_table = 'postflavors'
