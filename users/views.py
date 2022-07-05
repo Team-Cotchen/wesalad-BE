@@ -7,12 +7,14 @@ from rest_framework_simplejwt.tokens import RefreshToken
 # Django
 from django.shortcuts    import redirect
 from django.conf         import settings
+from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import get_user_model
 
 from .models                import GoogleSocialAccount
 from .services              import google_get_access_token, google_get_user_info
 from .serializers           import UserCreateSerializer
 from utils.decorators       import check_token
+from utils.utils            import error_message
 
 User = get_user_model()
 
@@ -80,9 +82,12 @@ class SignUpAPI(APIView):
                     
                     return Response(serializer.data, status=status.HTTP_201_CREATED)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
             except ValueError:
-                return Response({'ERROR' : 'THIS_ACCOUNT_ALREADY_EXIST'}, status=status.HTTP_400_BAD_REQUEST)
-          
+                return Response({'ERROR' : error_message('This account already exists')}, status=status.HTTP_400_BAD_REQUEST)
+            except ObjectDoesNotExist as e:
+                return Response({'ERROR' : error_message(f'{e}')}, status=status.HTTP_400_BAD_REQUEST)
+
 # class SignUpAPI(generics.CreateAPIView):
 #         queryset          = User.objects.all()
 #         lookup_url_kwargs = 'google_account_id'
