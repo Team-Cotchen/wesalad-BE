@@ -1,16 +1,19 @@
+from rest_framework             import generics
 from rest_framework.views       import APIView
 from rest_framework.response    import Response
-from rest_framework.permissions import IsAuthenticated
 
-from .models     import Post
+from .models      import Post
 from .serializers import PostCreateSerializer, PostDetailSerializer, PostSimpleSerializer
 
-class PostSimpleView(APIView):
+class PostSimpleView(generics.ListAPIView):
+    queryset         = Post.objects.all()
+    serializer_class = PostSimpleSerializer
+    
     def get(self, request):
-        posts      = Post.objects.all()
+        posts      = self.get_queryset()
         serializer = PostSimpleSerializer(posts, many=True)
         return Response(serializer.data, status=200)
-    
+
 class PostDetailView(APIView):
     def get(self, request, pk):
         try:
@@ -21,8 +24,6 @@ class PostDetailView(APIView):
             return Response("Post does not exist", status=400)
 
 class PostCreateView(APIView):
-    # permission_classes = [IsAuthenticated]
-    
     def post(self, request):
         category      = request.data.get("category")
         answers       = request.data.get("answers")
