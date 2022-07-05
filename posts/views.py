@@ -2,26 +2,25 @@ from rest_framework             import generics
 from rest_framework.views       import APIView
 from rest_framework.response    import Response
 
+from utils.utils  import error_message
+from .paginations import PostListPagination
 from .models      import Post
-from .serializers import PostCreateSerializer, PostDetailSerializer, PostSimpleSerializer
+from .serializers import PostSerializer
 
-class PostSimpleView(generics.ListAPIView):
+
+class PostListView(generics.ListAPIView):
     queryset         = Post.objects.all()
-    serializer_class = PostSimpleSerializer
-    
-    def get(self, request):
-        posts      = self.get_queryset()
-        serializer = PostSimpleSerializer(posts, many=True)
-        return Response(serializer.data, status=200)
+    serializer_class = PostSerializer
+    pagination_class = PostListPagination
 
 class PostDetailView(APIView):
     def get(self, request, pk):
         try:
             post       = Post.objects.get(id = pk)
-            serializer = PostDetailSerializer(post)
+            serializer = PostSerializer(post)
             return Response(serializer.data, status=200)
         except Post.DoesNotExist:
-            return Response("Post does not exist", status=400)
+            return Response(error_message("Post does not exist"), status=400)
 
 class PostCreateView(APIView):
     def post(self, request):
@@ -33,7 +32,7 @@ class PostCreateView(APIView):
         place         = request.data.get("place")
         flavor        = request.data.get("flavor")
         
-        serializer = PostCreateSerializer(data=request.data)
+        serializer = PostSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(
                 category      = category,
