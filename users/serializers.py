@@ -1,6 +1,8 @@
+#DRF
 from rest_framework                  import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
+# Django
 from django.db           import transaction
 from django.contrib.auth import get_user_model
 
@@ -53,20 +55,23 @@ class UserCreateSerializer(serializers.ModelSerializer):
         
     @transaction.atomic()
     def create(self, validated_data):
-        google_account_id = validated_data.pop('google_account_id')
-        stacks            = validated_data.pop('stacks').split(',')
-        answers           = validated_data.pop('answers').split(',')
+        google_account = GoogleSocialAccount.objects.get(id=validated_data.pop('google_account_id'))
+        stacks         = validated_data.pop('stacks').split(',')
+        answers        = validated_data.pop('answers').split(',')
         
-        user = User.objects.create(
-            name           = validated_data['name'],
-            ordinal_number = validated_data['ordinal_number'],
-            google_account = GoogleSocialAccount.objects.get(id=google_account_id)
-        )
+        if not User.objects.filter(google_account=google_account).exists():        
+            user = User.objects.create(
+                name           = validated_data['name'],
+                ordinal_number = validated_data['ordinal_number'],
+                google_account = google_account,                
+            )
+            
+            [user.useranswers.create(answer = Answer.objects.get(description=answer)) for answer in answers]
+            [user.userstacks.create(stack = Stack.objects.get(title=stack)) for stack in stacks]
+            
+            return user
         
-        [user.useranswers.create(answer = Answer.objects.get(description=answer)) for answer in answers]
-        [user.userstacks.create(stack = Stack.objects.get(title=stack)) for stack in stacks]
-
-        return user
+        raise ValueError
      
     class Meta:
         model  = User

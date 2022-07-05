@@ -3,19 +3,16 @@ from rest_framework.response         import Response
 from rest_framework                  import status
 from rest_framework.views            import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.permissions      import IsAuthenticated
-from rest_framework.decorators       import permission_classes
 
 # Django
 from django.shortcuts    import redirect
 from django.conf         import settings
 from django.contrib.auth import get_user_model
 
-from .models                import GoogleSocialAccount, UserAnswer, UserStack
-from characteristics.models import Question, Answer, Stack
+from .models                import GoogleSocialAccount
 from .services              import google_get_access_token, google_get_user_info
-from .serializers           import UserCreateSerializer, UserAnswerSerializer
-
+from .serializers           import UserCreateSerializer
+from utils.decorators       import check_token
 
 User = get_user_model()
 
@@ -38,14 +35,8 @@ class GoogleSignInAPI(APIView):
         
         access_token = google_get_access_token(google_token_api, auth_code)
         user_data    = google_get_user_info(access_token)
-
-        google_account, is_created = GoogleSocialAccount.objects.get_or_create(
-            sub       = user_data['sub'],
-            email     = user_data['email'],
-            image_url = user_data['picture']
-            )
-        if is_created:
-            return Response({'google_account' : google_account.id}, status=status.HTTP_200_OK)
+        
+        google_account = self.get_or_create(user_data)         
         
         if not User.objects.filter(google_account=google_account).exists():
             return Response({'google_account' : google_account.id}, status=status.HTTP_200_OK)
@@ -55,6 +46,16 @@ class GoogleSignInAPI(APIView):
                 
         return Response(token, status=status.HTTP_200_OK)
 
+    def get_or_create(self, user_data):
+        if not GoogleSocialAccount.objects.filter(email=user_data['email']).exists():
+            google_account = GoogleSocialAccount.objects.create(
+                sub       = user_data['sub'],
+                email     = user_data['email'],
+                image_url = user_data['picture']
+            )
+            return google_account
+        return GoogleSocialAccount.objects.get(email=user_data['email'])
+            
     def generate_jwt(self, user):
         refresh = RefreshToken.for_user(user)
         
@@ -63,24 +64,25 @@ class GoogleSignInAPI(APIView):
             'access' : str(refresh.access_token),
         }
 
-
 class SignUpAPI(APIView):
         def post(self, request, google_account_id):
+            try:    
+                serializer = UserCreateSerializer(data=request.data)
+                answers    = request.data.get('answers')
+                stacks     = request.data.get('stacks')
             
-            serializer = UserCreateSerializer(data=request.data)
-            answers    = request.data.get('answers')
-            stacks     = request.data.get('stacks')
-        
-            if serializer.is_valid():
-                serializer.save(
-                    google_account_id = google_account_id,
-                    answers = answers,
-                    stacks = stacks
-                )
-                
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            
+                if serializer.is_valid():
+                    serializer.save(
+                        google_account_id = google_account_id,
+                        answers = answers,
+                        stacks = stacks
+                    )
+                    
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            except ValueError:
+                return Response({'ERROR' : 'THIS_ACCOUNT_ALREADY_EXIST'}, status=status.HTTP_400_BAD_REQUEST)
+          
 # class SignUpAPI(generics.CreateAPIView):
 #         queryset          = User.objects.all()
 #         lookup_url_kwargs = 'google_account_id'
@@ -153,8 +155,3 @@ class SignUpAPI(APIView):
 #             return JsonResponse({'message' : 'THIS_ACCOUNT_ALREADY_EXIST'}, status=400)
 #         except ValueError:
 #             return JsonResponse({'message' : 'VALUE_ERROR'}, status=400)
-
-# @permission_classes([IsAuthenticated])
-# class FFView(APIView):
-#     def get(self, request, *args, **kw):
-#         return Response({'s' : 'fds'}, status=status.HTTP_200_OK)
