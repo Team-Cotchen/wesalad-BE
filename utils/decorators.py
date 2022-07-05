@@ -9,6 +9,8 @@ from rest_framework.response import  Response
 from rest_framework_simplejwt.exceptions  import TokenError
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 
+from utils.utils import error_message
+
 User = get_user_model()
 
 def check_token(func):
@@ -32,14 +34,14 @@ def check_token(func):
                     }, status=status.HTTP_200_OK)
                 
             except TokenError: 
-                return Response({'ERROR': 'Your login has expired.'.upper().replace(' ', '_')},status=status.HTTP_400_BAD_REQUEST)
+                return Response({'ERROR': error_message('Your login has expired')}, status=status.HTTP_400_BAD_REQUEST)
             except jwt.exceptions.InvalidTokenError: 
-                return Response({'ERROR': 'Your login has expired'.upper().replace(' ', '_')}, status=status.HTTP_401_UNAUTHORIZED)
+                return Response({'ERROR': error_message('Your login has expired')}, status=status.HTTP_401_UNAUTHORIZED)
             except User.DoesNotExist:
-                return Response({'ERROR': 'USER_DOES_NOT_EXIST'}, status=status.HTTP_400_BAD_REQUEST)        
+                return Response({'ERROR': error_message('User does not exist')}, status=status.HTTP_HTTP_400_BAD_REQUEST)        
         
         except jwt.exceptions.DecodeError:
-            return Response({'ERROR': 'DECODE_ERROR'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'ERROR': error_message('decode error')}, status=status.HTTP_HTTP_400_BAD_REQUEST)
         
         return func(self, request, *args, **kwargs)
     return wrapper
