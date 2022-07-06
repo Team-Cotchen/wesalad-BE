@@ -38,13 +38,14 @@ class GoogleSignInAPI(APIView):
         access_token = google_get_access_token(google_token_api, auth_code)
         user_data    = google_get_user_info(access_token)
         
-        google_account = self.get_or_create(user_data)         
-        
-        if not User.objects.filter(google_account=google_account).exists()\
-            or not User.objects.get(google_account=google_account).is_active:
+        google_account = self.get_or_create(user_data)
+        user_filter = User.objects.filter(google_account=google_account)
+
+        if not user_filter.exists()\
+            or not True in [user.is_active for user in user_filter]:
             return Response({'google_account' : google_account.id}, status=status.HTTP_200_OK)
         
-        user  = User.objects.get(google_account=google_account)
+        user  = User.objects.get(google_account=google_account, is_active=True)
         token = self.generate_jwt(user)
                 
         return Response(token, status=status.HTTP_200_OK)
