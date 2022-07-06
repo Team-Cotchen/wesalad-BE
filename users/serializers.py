@@ -63,8 +63,10 @@ class UserCreateSerializer(serializers.ModelSerializer):
         else:   
             stacks = validated_data.pop('stacks').split(',')
         
-        if not User.objects.filter(google_account=google_account).exists()\
-            or not User.objects.get(google_account=google_account).is_active:        
+        user_filter = User.objects.filter(google_account=google_account)
+
+        if not user_filter.exists()\
+            or not True in [user.is_active for user in user_filter]:     
             user = User.objects.create(
                 name           = validated_data['name'],
                 ordinal_number = validated_data['ordinal_number'],
