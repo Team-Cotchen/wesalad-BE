@@ -5,14 +5,14 @@ from rest_framework.views            import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 # Django
-from django.shortcuts    import redirect
-from django.conf         import settings
+from django.shortcuts       import redirect
+from django.conf            import settings
 from django.core.exceptions import ObjectDoesNotExist
-from django.contrib.auth import get_user_model
+from django.contrib.auth    import get_user_model
 
 from .models                import GoogleSocialAccount
 from .services              import google_get_access_token, google_get_user_info
-from .serializers           import UserCreateSerializer
+from .serializers           import UserSerializer, UserCreateSerializer
 from utils.decorators       import check_token
 from utils.utils            import error_message
 
@@ -38,12 +38,14 @@ class GoogleSignInAPI(APIView):
         access_token = google_get_access_token(google_token_api, auth_code)
         user_data    = google_get_user_info(access_token)
         
-        google_account = self.get_or_create(user_data)         
-        
-        if not User.objects.filter(google_account=google_account).exists():
+        google_account = self.get_or_create(user_data)
+        user_filter = User.objects.filter(google_account=google_account)
+
+        if not user_filter.exists()\
+            or not True in [user.is_active for user in user_filter]:
             return Response({'google_account' : google_account.id}, status=status.HTTP_200_OK)
         
-        user  = User.objects.get(google_account=google_account)
+        user  = User.objects.get(google_account=google_account, is_active=True)
         token = self.generate_jwt(user)
                 
         return Response(token, status=status.HTTP_200_OK)
@@ -67,26 +69,74 @@ class GoogleSignInAPI(APIView):
         }
 
 class SignUpAPI(APIView):
-        def post(self, request, google_account_id):
-            try:    
-                serializer = UserCreateSerializer(data=request.data)
-                answers    = request.data.get('answers')
-                stacks     = request.data.get('stacks')
-            
-                if serializer.is_valid():
-                    serializer.save(
-                        google_account_id = google_account_id,
-                        answers = answers,
-                        stacks = stacks
-                    )
-                    
-                    return Response(serializer.data, status=status.HTTP_201_CREATED)
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            
-            except ValueError:
-                return Response({'ERROR' : error_message('This account already exists')}, status=status.HTTP_400_BAD_REQUEST)
-            except ObjectDoesNotExist as e:
+    def post(self, request, google_account_id):
+        try:    
+            serializer = UserCreateSerializer(data=request.data)
+            answers    = request.data.get('answers')
+            stacks     = request.data.get('stacks')
+        
+            if serializer.is_valid():
+                serializer.save(
+                    google_account_id = google_account_id,
+                    answers = answers,
+                    stacks = stacks
+                )
+                
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        except ValueError:
+            return Response({'ERROR' : error_message('This account already exists')}, status=status.HTTP_400_BAD_REQUEST)
+        except ObjectDoesNotExist as e:
+            return Response({'ERROR' : error_message(f'{e}')}, status=status.HTTP_400_BAD_REQUEST)
+
+class ProfileAPI(APIView):
+    @check_token
+    def get(self, request):
+        try:
+            user       = request.user
+            serializer = UserSerializer(user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        except ObjectDoesNotExist as e:
                 return Response({'ERROR' : error_message(f'{e}')}, status=status.HTTP_400_BAD_REQUEST)
+
+    @check_token
+    def put(self, request):
+        try:
+            user = request.user
+            
+            serializer = UserSerializer(user, data=request.data)
+            answers    = request.data.get('answers')
+            stacks     = request.data.get('stacks')
+            
+            if serializer.is_valid():
+                serializer.save(
+                    answers = answers,
+                    stacks = stacks
+                )
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError:
+                return Response({'ERROR' : error_message('This account already exists')}, status=status.HTTP_400_BAD_REQUEST)
+        except ObjectDoesNotExist as e:
+                return Response({'ERROR' : error_message(f'{e}')}, status=status.HTTP_400_BAD_REQUEST)
+    
+    @check_token
+    def delete(self, request):
+        user = request.user
+        if not user.is_active:
+            return Response({'ERROR' : error_message('This account has been withdrawn.')}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user.userstacks.all().delete()
+        user.useranswers.all().delete()
+
+        user.posts.all().delete()    
+        user.is_active = False
+        user.save()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 # class SignUpAPI(generics.CreateAPIView):
 #         queryset          = User.objects.all()

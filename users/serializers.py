@@ -5,7 +5,6 @@ from rest_framework_simplejwt.tokens import RefreshToken
 # Django
 from django.db           import transaction
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ObjectDoesNotExist
 
 from characteristics.models      import Answer, Stack
 from characteristics.serializers import StackSerializer
@@ -57,10 +56,17 @@ class UserCreateSerializer(serializers.ModelSerializer):
     @transaction.atomic()
     def create(self, validated_data):
         google_account = GoogleSocialAccount.objects.get(id=validated_data.pop('google_account_id'))
-        stacks         = validated_data.pop('stacks').split(',')
         answers        = validated_data.pop('answers').split(',')
         
-        if not User.objects.filter(google_account=google_account).exists():        
+        if not validated_data.get('stacks'):
+            stacks = None
+        else:   
+            stacks = validated_data.pop('stacks').split(',')
+        
+        user_filter = User.objects.filter(google_account=google_account)
+
+        if not user_filter.exists()\
+            or not True in [user.is_active for user in user_filter]:     
             user = User.objects.create(
                 name           = validated_data['name'],
                 ordinal_number = validated_data['ordinal_number'],
@@ -68,12 +74,46 @@ class UserCreateSerializer(serializers.ModelSerializer):
             )
             
             [user.useranswers.create(answer = Answer.objects.get(description=answer)) for answer in answers]
-            [user.userstacks.create(stack = Stack.objects.get(title=stack)) for stack in stacks]
+            
+            if stacks:
+                [user.userstacks.create(stack = Stack.objects.get(title=stack)) for stack in stacks]
             
             return user
         
         raise ValueError
-     
+    
     class Meta:
         model  = User
         fields = '__all__'
+        
+class UserSerializer(serializers.ModelSerializer):
+    google_account = GoogleSocialAccountSerializer(required=False)
+    user_answers   = UserAnswerSerializer(source='useranswers',many=True, required=False)
+    user_stacks    = UserStackSerializer(source='userstacks',many=True, required=False)
+    
+    @transaction.atomic()
+    def update(self, user, validated_data):
+        if not validated_data.get('stacks'):
+            stacks = None
+        else:   
+            stacks = validated_data.pop('stacks').split(',')
+
+        answers = validated_data.pop('answers').split(',')
+        
+        user.name = validated_data['name']
+        user.ordinal_number = validated_data['ordinal_number']
+        user.save()
+        
+        user.useranswers.all().delete()
+        user.userstacks.all().delete()
+        
+        [user.useranswers.create(answer = Answer.objects.get(description=answer)) for answer in answers]
+        
+        if stacks:
+            [user.userstacks.create(stack = Stack.objects.get(title=stack)) for stack in stacks]
+            
+        return user
+    
+    class Meta:
+        model  = User
+        fields = ['name', 'ordinal_number', 'google_account', 'user_answers', 'user_stacks']
