@@ -2,16 +2,23 @@ from rest_framework             import generics
 from rest_framework.views       import APIView
 from rest_framework.response    import Response
 
-from utils.utils  import error_message
-from .paginations import PostListPagination
-from .models      import Post
-from .serializers import PostSerializer
+from utils.utils      import error_message
+from utils.decorators import check_token
+from .paginations     import PostListPagination
+from .models          import Post
+from .serializers     import PostCreateSerializer, PostSerializer
 
 
 class PostListView(generics.ListAPIView):
-    queryset         = Post.objects.all()
     serializer_class = PostSerializer
     pagination_class = PostListPagination
+    
+    def get_queryset(self):
+        queryset = Post.objects.all()
+        title    = self.request.query_params.getlist('title')
+        if title:
+            queryset = queryset.filter(poststacks__stack__title__in = title)
+        return queryset
 
 class PostDetailView(APIView):
     def get(self, request, pk):
@@ -23,6 +30,7 @@ class PostDetailView(APIView):
             return Response(error_message("Post does not exist"), status=400)
 
 class PostCreateView(APIView):
+    @check_token
     def post(self, request):
         category      = request.data.get("category")
         answers       = request.data.get("answers")
@@ -32,9 +40,10 @@ class PostCreateView(APIView):
         place         = request.data.get("place")
         flavor        = request.data.get("flavor")
         
-        serializer = PostSerializer(data=request.data)
+        serializer = PostCreateSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(
+                user_id       = request.user.id,
                 category      = category,
                 answers       = answers,
                 stacks        = stacks,

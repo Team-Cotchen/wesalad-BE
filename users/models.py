@@ -29,7 +29,7 @@ class User(AbstractBaseUser, PermissionsMixin, TimestampZone):
     REQUIRED_FIELDS = ['name', 'ordinal_number']
     
     def __str__(self):
-        return self.nickname
+        return self.name
     
     class Meta:
         db_table = 'users'
