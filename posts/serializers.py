@@ -132,24 +132,60 @@ class PostSerializer(serializers.ModelSerializer):
     
     def get_post_answer(self, post):
         primary_answer = []
-        not_primary_answer = []
+        secondary_answer = []
         postanswers = post.postanswers.filter(post = post)
         for postanswer in postanswers:
             if postanswer.is_primary:
                 primary_answer.append(postanswer.answer.description)
             else:
-                not_primary_answer.append(postanswer.answer.description)
+                secondary_answer.append(postanswer.answer.description)
 
         data = [
-            {'is_primary' : True, 'answer' : primary_answer},
-            {'is_primary' : False,'answer' : not_primary_answer}
+            {'primary_answer' : primary_answer},
+            {'secondary_answer' : secondary_answer}
         ]
         return data
     
     def get_post_place(self, post):
         postplace = post.postplaces.get(post = post)
         return postplace.place.title
+
+    class Meta:
+        model  = Post
+        fields = '__all__'
     
+class PostCreateSerializer(serializers.ModelSerializer):
+    category      = serializers.SerializerMethodField()
+    post_answer   = serializers.SerializerMethodField()
+    post_stack    = PostStackSerializer(source='poststacks', many=True, required=False)
+    post_applyway = PostApplyWaySerializer(source='postapplyways', many=True, required=False)
+    post_flavor   = PostFlavorSerializer(source='postflavors', many=True, required=False)
+    post_place    = serializers.SerializerMethodField()
+    user          = UserSerializer(required=False)
+    
+    def get_category(self, post):
+        return post.category.title
+    
+    def get_post_answer(self, post):
+        primary_answer = []
+        secondary_answer = []
+        postanswers = post.postanswers.filter(post = post)
+        for postanswer in postanswers:
+            if postanswer.is_primary:
+                primary_answer.append(postanswer.answer.description)
+            else:
+                secondary_answer.append(postanswer.answer.description)
+
+        data = [
+            {'primary_answer' : primary_answer},
+            {'secondary_answer' : secondary_answer}
+        ]
+        return data
+    
+    def get_post_place(self, post):
+        postplace = post.postplaces.get(post = post)
+        return postplace.place.title
+
     @transaction.atomic()
     def create(self, validated_data):
         try:
@@ -161,7 +197,6 @@ class PostSerializer(serializers.ModelSerializer):
             place         = validated_data.pop("place", None)
             flavor        = validated_data.pop("flavor", None)
             
-            user_instance     = User.objects.get(id = 1)
             category_instance = Category.objects.get(title = category)
             applyway_instance = ApplyWay.objects.get(title = applyway)
             place_instance    = Place.objects.get(title = place)
@@ -171,7 +206,6 @@ class PostSerializer(serializers.ModelSerializer):
             answers = json.loads(answers)
             
             post = Post.objects.create(
-                user     = user_instance,
                 category = category_instance,
                 **validated_data
                 )
@@ -190,8 +224,7 @@ class PostSerializer(serializers.ModelSerializer):
             return post
         except ObjectDoesNotExist as e:
             raise serializers.ValidationError(error_message(f'{e}')) 
-            
-    
+
     class Meta:
         model  = Post
         fields = '__all__'
