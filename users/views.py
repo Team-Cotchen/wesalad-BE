@@ -1,3 +1,5 @@
+import requests
+
 # DRF
 from rest_framework.response         import Response
 from rest_framework                  import status
@@ -11,7 +13,6 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth    import get_user_model
 
 from .models                import GoogleSocialAccount
-from .services              import google_get_access_token, google_get_user_info
 from .serializers           import UserSerializer, UserCreateSerializer
 from utils.decorators       import check_token
 from utils.utils            import error_message
@@ -30,13 +31,13 @@ class GoogleLoginAPI(APIView):
         response = redirect(f'{google_auth_api}?client_id={app_key}&response_type=code&redirect_uri={redirect_uri}&scope={scope}')
         return response
 
+
 class GoogleSignInAPI(APIView):
     def get(self, request):
         auth_code        = request.GET.get('code')
         google_token_api = "https://oauth2.googleapis.com/token"
         
-        access_token = google_get_access_token(google_token_api, auth_code)
-        user_data    = google_get_user_info(access_token)
+        user_data = self.google_get_user_info(google_token_api, auth_code)
         
         google_account = self.get_or_create(user_data)
         user_filter = User.objects.filter(google_account=google_account)
@@ -50,6 +51,29 @@ class GoogleSignInAPI(APIView):
                 
         return Response(token, status=status.HTTP_200_OK)
 
+    def google_get_user_info(self, google_token_api, auth_code):
+        client_id     = settings.GOOGLE_OAUTH2_CLIENT_ID
+        client_secret = settings.GOOGLE_OAUTH2_CLIENT_SECRET
+        redirect_uri  = settings.GOOGLE_OAUTH2_REDIRECT_URI
+        code          = auth_code
+        grant_type    = 'authorization_code'
+        state         = 'random_string'
+        
+        google_token_api += \
+            f'?client_id={client_id}&client_secret={client_secret}&code={code}&grant_type={grant_type}&redirect_uri={redirect_uri}&state={state}'
+        
+        google_access_token = requests.post(google_token_api, timeout=2).json()['access_token']
+        
+        user_info_response = requests.get(
+            'https://www.googleapis.com/oauth2/v3/userinfo',
+            params = {
+                'access_token': google_access_token
+            }
+        )
+        
+        user_info = user_info_response.json()
+        return user_info
+
     def get_or_create(self, user_data):
         if not GoogleSocialAccount.objects.filter(email=user_data['email']).exists():
             google_account = GoogleSocialAccount.objects.create(
@@ -59,7 +83,7 @@ class GoogleSignInAPI(APIView):
             )
             return google_account
         return GoogleSocialAccount.objects.get(email=user_data['email'])
-            
+                
     def generate_jwt(self, user):
         refresh = RefreshToken.for_user(user)
         
@@ -67,6 +91,7 @@ class GoogleSignInAPI(APIView):
             'refresh': str(refresh),
             'access' : str(refresh.access_token),
         }
+
 
 class SignUpAPI(APIView):
     def post(self, request, google_account_id):
@@ -78,8 +103,8 @@ class SignUpAPI(APIView):
             if serializer.is_valid():
                 serializer.save(
                     google_account_id = google_account_id,
-                    answers = answers,
-                    stacks = stacks
+                    answers           = answers,
+                    stacks            = stacks
                 )
                 
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -89,6 +114,7 @@ class SignUpAPI(APIView):
             return Response({'ERROR' : error_message('This account already exists')}, status=status.HTTP_400_BAD_REQUEST)
         except ObjectDoesNotExist as e:
             return Response({'ERROR' : error_message(f'{e}')}, status=status.HTTP_400_BAD_REQUEST)
+
 
 class ProfileAPI(APIView):
     @check_token
