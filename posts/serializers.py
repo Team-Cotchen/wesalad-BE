@@ -149,6 +149,52 @@ class PostSerializer(serializers.ModelSerializer):
     def get_post_place(self, post):
         postplace = post.postplaces.get(post = post)
         return postplace.place.title
+    
+    @transaction.atomic()
+    def update(self, instance, validated_data):
+        try:
+            category      = validated_data.pop("category", None)
+            answers       = validated_data.pop("answers", None)
+            stacks        = validated_data.pop("stacks", None)
+            applyway      = validated_data.pop("applyway", None)
+            applyway_info = validated_data.pop("applyway_info", None)
+            place         = validated_data.pop("place", None)
+            flavor        = validated_data.pop("flavor", None)
+            
+            category_instance = Category.objects.get(title = category)
+            applyway_instance = ApplyWay.objects.get(title = applyway)
+            place_instance    = Place.objects.get(title = place)
+            flavor_instance   = Flavor.objects.get(title = flavor)
+            
+            Post.objects.filter(id = instance.id)\
+            .update(
+                category = category_instance,
+                **validated_data
+            )
+            
+            instance = Post.objects.get(id = instance.id)
+            
+            stacks  = json.loads(stacks)
+            answers = json.loads(answers)
+            
+            instance.postplaces.all().delete()
+            instance.postflavors.all().delete()
+            instance.postapplyways.all().delete()
+            instance.poststacks.all().delete()
+            instance.postanswers.all().delete()
+            
+            instance.postplaces.create(place = place_instance)
+            instance.postflavors.create(flavor = flavor_instance)
+            instance.postapplyways.create(applyway = applyway_instance, description = applyway_info)
+            [instance.poststacks.create(stack = Stack.objects.get(title = stack)) for stack in stacks]
+            [instance.postanswers.create(
+                answer     = Answer.objects.get(description = answer.get("description")),
+                is_primary = answer.get("is_primary")
+                ) for answer in answers]
+            
+            return instance
+        except ObjectDoesNotExist as e:
+            raise serializers.ValidationError(error_message(f'{e}')) 
 
     class Meta:
         model  = Post
