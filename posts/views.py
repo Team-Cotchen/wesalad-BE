@@ -28,6 +28,37 @@ class PostDetailView(APIView):
             return Response(serializer.data, status=200)
         except Post.DoesNotExist:
             return Response(error_message("Post does not exist"), status=400)
+    
+    @check_token
+    def put(self, request, pk):
+        user = request.user
+        try:
+            post = Post.objects.get(id = pk, user = user)
+        except Post.DoesNotExist:
+            return Response(error_message("Post does not exist"), status=400)
+        
+        category      = request.data.get("category")
+        answers       = request.data.get("answers")
+        stacks        = request.data.get("stacks")
+        applyway      = request.data.get("applyway")
+        applyway_info = request.data.get("applyway_info")
+        place         = request.data.get("place")
+        flavor        = request.data.get("flavor")
+        
+        serializer = PostSerializer(post, data=request.data)
+        if serializer.is_valid():
+            serializer.save(
+                user_id       = user.id,
+                category      = category,
+                answers       = answers,
+                stacks        = stacks,
+                applyway      = applyway,
+                applyway_info = applyway_info,
+                place         = place,
+                flavor        = flavor
+            )
+            return Response(serializer.data, status=200)
+        return Response(serializer.errors, status=400)
 
 class PostCreateView(APIView):
     @check_token
