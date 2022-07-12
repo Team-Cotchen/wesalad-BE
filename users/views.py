@@ -147,7 +147,7 @@ class ProfileAPI(APIView):
                 return Response({'ERROR' : error_message('This account already exists')}, status=status.HTTP_400_BAD_REQUEST)
         except ObjectDoesNotExist as e:
                 return Response({'ERROR' : error_message(f'{e}')}, status=status.HTTP_400_BAD_REQUEST)
-    
+            
     @check_token
     def delete(self, request):
         user = request.user
