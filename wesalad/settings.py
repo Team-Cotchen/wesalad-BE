@@ -2,7 +2,7 @@ from pathlib import Path
 from datetime import timedelta
 from my_settings import DATABASES, SECRET_KEY, ALGORITHM, GOOGLE_OAUTH2_CLIENT_ID, GOOGLE_OAUTH2_CLIENT_SECRET, GOOGLE_OAUTH2_REDIRECT_URI
 
-import pymysql
+import pymysql, os
 
 pymysql.install_as_MySQLdb()
 
@@ -21,6 +21,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+# STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
 
 # Application Definition
 
@@ -56,7 +57,7 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=3),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -82,14 +83,14 @@ SIMPLE_JWT = {
 AUTH_USER_MODEL = 'users.User'
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',    
 ]
 
 ROOT_URLCONF = 'wesalad.urls'
