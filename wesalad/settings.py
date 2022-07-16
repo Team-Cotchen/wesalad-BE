@@ -2,7 +2,7 @@ from pathlib import Path
 from datetime import timedelta
 from my_settings import DATABASES, SECRET_KEY, ALGORITHM, GOOGLE_OAUTH2_CLIENT_ID, GOOGLE_OAUTH2_CLIENT_SECRET, GOOGLE_OAUTH2_REDIRECT_URI
 
-import pymysql
+import pymysql, os
 
 pymysql.install_as_MySQLdb()
 
@@ -21,6 +21,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+# STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
 
 # Application Definition
 
