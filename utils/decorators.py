@@ -52,3 +52,17 @@ def check_token(func):
         
         return func(self, request, *args, **kwargs)
     return wrapper
+
+def check_user(func):
+    def wrapper(self, request, *args, **kwargs):
+        try:
+            access_token = request.headers.get('access', None)
+            if access_token:
+                payload      = jwt.decode(access_token, settings.SECRET_KEY, settings.ALGORITHM)
+                request.user = User.objects.get(id=payload['sub'])
+                    
+        except jwt.exceptions.ExpiredSignatureError:
+            pass
+        
+        return func(self, request, *args, **kwargs)
+    return wrapper
