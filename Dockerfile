@@ -12,7 +12,7 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-EXPOSE 8080
+EXPOSE 80
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "wesalad.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:80", "wesalad.wsgi:application"]
 
