@@ -136,9 +136,15 @@ class PostSerializer(serializers.ModelSerializer):
         postanswers = post.postanswers.filter(post = post)
         for postanswer in postanswers:
             if postanswer.is_primary:
-                primary_answer.append(postanswer.answer.description)
+                primary_answer.append({
+                    'description' : postanswer.answer.description,
+                    'image_url' : postanswer.answer.image_url
+                    })
             else:
-                secondary_answer.append(postanswer.answer.description)
+                secondary_answer.append({
+                    'description' : postanswer.answer.description,
+                    'image_url' : postanswer.answer.image_url
+                    })
 
         data = [
             {'primary_answer' : primary_answer},
@@ -218,9 +224,15 @@ class PostCreateSerializer(serializers.ModelSerializer):
         postanswers = post.postanswers.filter(post = post)
         for postanswer in postanswers:
             if postanswer.is_primary:
-                primary_answer.append(postanswer.answer.description)
+                primary_answer.append({
+                    'description' : postanswer.answer.description,
+                    'image_url' : postanswer.answer.image_url
+                    })
             else:
-                secondary_answer.append(postanswer.answer.description)
+                secondary_answer.append({
+                    'description' : postanswer.answer.description,
+                    'image_url' : postanswer.answer.image_url
+                    })
 
         data = [
             {'primary_answer' : primary_answer},
