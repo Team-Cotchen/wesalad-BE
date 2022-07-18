@@ -1,12 +1,8 @@
 from rest_framework import filters
 
-from users.models     import User
-from utils.decorators import check_user
-
 
 class PostListFilterBackend(filters.BaseFilterBackend):
     
-    @check_user
     def filter_queryset(self, request, queryset, view):
         stack     = request.query_params.getlist('stack')
         flavor    = request.query_params.get('flavor')
